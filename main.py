@@ -1,6 +1,7 @@
 import os
 from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext  # Corrected import
+from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackContext
+from telegram.ext import filters  # Updated Filters import
 from flask import Flask
 import logging
 
@@ -37,7 +38,7 @@ def main():
 
     # Add handlers for the commands
     dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(MessageHandler(Filters.forwarded, forward_info))  # Corrected Filters usage
+    dispatcher.add_handler(MessageHandler(filters.Filters.forwarded, forward_info))  # Correct Filters usage
 
     # Start the bot
     updater.start_polling()
