@@ -15,10 +15,13 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
                     level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Bot functions
+# Define the /start command
 def start(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text('Hello! I can show user info when you forward a message.')
+    update.message.reply_text(
+        "Hello! I'm UserInfoBot. Forward a message to get detailed user information!"
+    )
 
+# Define the function to handle forwarded messages and show user info
 def forward_info(update: Update, context: CallbackContext) -> None:
     if update.message.forward_from:
         user_info = f"User Info:\nUsername: @{update.message.forward_from.username}\nID: {update.message.forward_from.id}"
@@ -26,6 +29,7 @@ def forward_info(update: Update, context: CallbackContext) -> None:
     else:
         update.message.reply_text("No user info available.")
 
+# Main function to start the bot
 def main():
     updater = Updater(TOKEN, use_context=True)
     dispatcher = updater.dispatcher
