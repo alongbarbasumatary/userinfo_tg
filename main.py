@@ -1,10 +1,21 @@
 import os
 from telegram import Update
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from flask import Flask
+import logging
 
-# Fetch the Telegram bot token from environment variables
-token = os.getenv('TELEGRAM_TOKEN')
+# Fetch the bot's API token from the environment variable
+TOKEN = os.getenv('TELEGRAM_TOKEN')
 
+# Create a Flask app to handle HTTP requests and use Flask as a web server
+app = Flask(__name__)
+
+# Log handler for debugging
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Bot functions
 def start(update: Update, context: CallbackContext) -> None:
     update.message.reply_text('Hello! I can show user info when you forward a message.')
 
@@ -16,7 +27,7 @@ def forward_info(update: Update, context: CallbackContext) -> None:
         update.message.reply_text("No user info available.")
 
 def main():
-    updater = Updater(token)
+    updater = Updater(TOKEN, use_context=True)
     dispatcher = updater.dispatcher
 
     # Add handlers for the commands
@@ -25,7 +36,14 @@ def main():
 
     # Start the bot
     updater.start_polling()
-    updater.idle()
+
+# Create a route for the Flask app to keep it running
+@app.route('/')
+def index():
+    return "Bot is running!"
 
 if __name__ == '__main__':
+    # Use port 8080 to listen for requests from Render
+    from werkzeug.serving import run_simple
+    run_simple('0.0.0.0', 8080, app)
     main()
