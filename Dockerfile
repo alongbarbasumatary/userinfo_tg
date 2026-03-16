@@ -1,23 +1,21 @@
-# Use an official Python runtime as the base image
-FROM python:3.9-slim
+# Use a lightweight official Python image
+FROM python:3.9-slim-bullseye
 
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy the requirements file into the container
+# Copy requirements and install dependencies
 COPY requirements.txt /app/
-
-# Install the dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application into the container
+# Copy the rest of the application code
 COPY . /app/
 
-# Expose the port that the Flask app will run on
+# Expose the port Render expects
 EXPOSE 8080
 
-# Set environment variables for the bot token
-ENV TELEGRAM_TOKEN your-telegram-bot-token-here
+# The environment variables TELEGRAM_TOKEN and BOT_URL
+# should be set in Render's Environment Variables dashboard
 
-# Command to run the bot
-CMD ["python", "main.py"]
+# Command to start the bot
+CMD ["python", "app.py"]
