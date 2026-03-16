@@ -1,55 +1,62 @@
 import os
 from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackContext
-from telegram.ext import filters  # Updated Filters import
-from flask import Flask
-import logging
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from flask import Flask, request, jsonify
 
-# Fetch the bot's API token from the environment variable
-TOKEN = os.getenv('TELEGRAM_TOKEN')
+# --- Fetch environment variables ---
+TOKEN = os.getenv('TELEGRAM_TOKEN')       # Telegram bot token
+BOT_URL = os.getenv('BOT_URL')            # e.g., "https://yourapp.onrender.com"
 
-# Create a Flask app to handle HTTP requests and use Flask as a web server
+# Flask app
 app = Flask(__name__)
 
-# Log handler for debugging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Define the /start command
-def start(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text(
+# --- Telegram Bot Handlers ---
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handler for /start command"""
+    await update.message.reply_text(
         "Hello! I'm UserInfoBot. Forward a message to get detailed user information!"
     )
 
-# Define the function to handle forwarded messages and show user info
-def forward_info(update: Update, context: CallbackContext) -> None:
+async def forward_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handler for forwarded messages"""
     if update.message.forward_from:
-        user_info = f"User Info:\nUsername: @{update.message.forward_from.username}\nID: {update.message.forward_from.id}"
-        update.message.reply_text(user_info)
+        user_info = (
+            f"User Info:\n"
+            f"Username: @{update.message.forward_from.username}\n"
+            f"ID: {update.message.forward_from.id}"
+        )
+        await update.message.reply_text(user_info)
     else:
-        update.message.reply_text("No user info available.")
+        await update.message.reply_text("No user info available.")
 
-# Main function to start the bot
-def main():
-    # Create the Updater with the bot token
-    updater = Updater(TOKEN, use_context=True)
-    dispatcher = updater.dispatcher
+# --- Telegram Application ---
+application = ApplicationBuilder().token(TOKEN).build()
+application.add_handler(CommandHandler("start", start))
+application.add_handler(MessageHandler(filters.FORWARDED, forward_info))
 
-    # Add handlers for the commands
-    dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(MessageHandler(filters.Filters.forwarded, forward_info))  # Correct Filters usage
+# --- Flask route to receive Telegram updates ---
+WEBHOOK_PATH = f"/webhook/{TOKEN}"
 
-    # Start the bot
-    updater.start_polling()
+@app.route(WEBHOOK_PATH, methods=['POST'])
+def webhook():
+    """Receive updates from Telegram and process them"""
+    data = request.get_json(force=True)
+    application.bot.process_update(Update.de_json(data, application.bot))
+    return jsonify(ok=True)
 
-# Create a route for the Flask app to keep it running
+# Health check route
 @app.route('/')
 def index():
     return "Bot is running!"
 
+# --- Set webhook on startup ---
 if __name__ == '__main__':
-    # Use port 8080 to listen for requests from Render
-    from werkzeug.serving import run_simple
-    run_simple('0.0.0.0', 8080, app)
-    main()
+    if BOT_URL:
+        webhook_url = f"{BOT_URL}{WEBHOOK_PATH}"
+        application.bot.set_webhook(webhook_url)
+        print(f"Webhook set to: {webhook_url}")
+    else:
+        print("Warning: BOT_URL not set. Webhook will not work.")
+
+    # Start Flask server
+    app.run(host='0.0.0.0', port=8080)
